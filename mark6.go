@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/go.net/html"
 	"fmt"
 	"html/template"
+	"regexp"
 	"strings"
 )
 
@@ -50,6 +51,7 @@ var allowTags = map[string]map[string]bool {
 }
 
 func traversal(node *html.Node) string {
+	javascriptProtocolChecker := regexp.MustCompile("^\\s*javascript:")
 	res := ""
 
 	switch node.Type {
@@ -63,6 +65,11 @@ func traversal(node *html.Node) string {
 			attrs := make([]string, 0, 5)
 			for _, attr := range node.Attr {
 				if allowMap[attr.Key] {
+					if tagName == "a" && attr.Key == "href" {
+						if javascriptProtocolChecker.MatchString(attr.Val) {
+							continue
+						}
+					}
 					t := fmt.Sprintf(`%s="%s"`, attr.Key, template.HTMLEscapeString(attr.Val))
 					attrs = append(attrs, t)
 				}
