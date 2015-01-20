@@ -140,5 +140,13 @@ func Parse(src string) (template.HTML, error) {
 	return template.HTML(res), nil
 }
 
+func GetFirstElementByTag(src string, tag string) (*html.Node, error) {
+	doc, err := html.Parse(strings.NewReader(src))
+	if err != nil {
+		return nil, err
+	}
+	element := getFirstElementByTagName(doc, tag)
+	return element, nil
+}
 
 
