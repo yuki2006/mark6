@@ -50,6 +50,7 @@ var allowTags = map[string]map[string]bool {
 	"del" : allowAttrs(),
 	"sup" : allowAttrs(),
 	"sub" : allowAttrs(),
+	"u" : allowAttrs(),
 }
 
 func traversal(node *html.Node) string {
