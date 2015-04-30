@@ -51,6 +51,7 @@ var allowTags = map[string]map[string]bool {
 	"sup" : allowAttrs(),
 	"sub" : allowAttrs(),
 	"u" : allowAttrs(),
+	"backquote":allowAttrs(),
 }
 
 func traversal(node *html.Node) string {
@@ -82,9 +83,9 @@ func traversal(node *html.Node) string {
 			switch tagName {
 			case "br", "img":
 				if len(attr) > 0 {
-					return fmt.Sprintf("<%s %s \\>", tagName, attr)
+					return fmt.Sprintf("<%s %s />", tagName, attr)
 				} else {
-					return fmt.Sprintf("<%s \\>", tagName)
+					return fmt.Sprintf("<%s />", tagName)
 				}
 			default:
 				if len(attr) > 0 {
