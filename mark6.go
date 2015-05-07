@@ -52,6 +52,7 @@ var allowTags = map[string]map[string]bool {
 	"sub" : allowAttrs(),
 	"u" : allowAttrs(),
 	"backquote":allowAttrs(),
+	"s":allowAttrs(),
 }
 
 func traversal(node *html.Node) string {
