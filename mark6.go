@@ -51,7 +51,7 @@ var allowTags = map[string]map[string]bool {
 	"sup" : allowAttrs(),
 	"sub" : allowAttrs(),
 	"u" : allowAttrs(),
-	"backquote":allowAttrs(),
+	"blockquote":allowAttrs(),
 	"s":allowAttrs(),
 }
 
