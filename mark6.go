@@ -1,7 +1,7 @@
 package mark6
 
 import (
-	"code.google.com/p/go.net/html"
+	"golang.org/x/net/html"
 	"fmt"
 	"html/template"
 	"regexp"
@@ -16,7 +16,7 @@ func allowAttrs(attrs ...string) map[string]bool {
 	return mp
 }
 
-var allowTags = map[string]map[string]bool {
+var allowTags = map[string]map[string]bool{
 	"a" : allowAttrs("href"),
 	"b" : allowAttrs(),
 	"i" : allowAttrs("class"),
@@ -53,6 +53,7 @@ var allowTags = map[string]map[string]bool {
 	"u" : allowAttrs(),
 	"blockquote":allowAttrs(),
 	"s":allowAttrs(),
+	"marquee":allowAttrs(),
 }
 
 func traversal(node *html.Node) string {
@@ -63,7 +64,7 @@ func traversal(node *html.Node) string {
 	case html.TextNode :
 		return template.HTMLEscapeString(node.Data)
 	case html.ElementNode :
-		tagName := node.Data
+		tagName := strings.ToLower(node.Data)
 		allowMap, found := allowTags[tagName]
 
 		if found {
@@ -71,7 +72,9 @@ func traversal(node *html.Node) string {
 			for _, attr := range node.Attr {
 				if allowMap[attr.Key] {
 					if tagName == "a" && attr.Key == "href" {
-						if javascriptProtocolChecker.MatchString(attr.Val) {
+						value := strings.Replace(strings.ToLower(attr.Val), "\n", "", -1)
+
+						if javascriptProtocolChecker.MatchString(value) {
 							continue
 						}
 					}
@@ -92,6 +95,14 @@ func traversal(node *html.Node) string {
 				if len(attr) > 0 {
 					res += fmt.Sprintf("<%s %s>", tagName, attr)
 				} else {
+
+					if tagName == "a" {
+						for c := node.FirstChild; c != nil; c = c.NextSibling {
+							res += traversal(c)
+						}
+						// 属性なしで a タグの場合タグ自体削除
+						return res
+					}
 					res += fmt.Sprintf("<%s>", tagName)
 				}
 			}
