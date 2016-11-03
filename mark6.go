@@ -75,7 +75,7 @@ func traversal(node *html.Node) (res string, err error) {
 			for _, attr := range node.Attr {
 				if allowMap[attr.Key] {
 					if tagName == "a" && attr.Key == "href" {
-						if !strings.HasPrefix(attr.Val, "http") {
+						if strings.Contains(attr.Val, ":") && !strings.HasPrefix(attr.Val, "http") {
 							err = ERASE
 							continue
 						}
