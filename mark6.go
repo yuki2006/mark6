@@ -125,6 +125,7 @@ func traversal(node *html.Node) (res string, err error) {
 
 				res += fmt.Sprintf("</%s>", tagName)
 			}
+		}
 	case html.DocumentNode :
 		for c := node.FirstChild; c != nil; c = c.NextSibling {
 			r, e := traversal(c)
