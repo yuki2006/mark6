@@ -109,23 +109,22 @@ func traversal(node *html.Node) (res string, err error) {
 						}
 						// 属性なしで a タグの場合タグ自体削除
 						err = ERASE
-					} else {
-						// それ以外のタグは属性がなくても追加 （そういうタグがあるのか？）
-						res += fmt.Sprintf("<%s>", tagName)
+						return
 					}
+					// それ以外のタグは属性がなくても追加 （そういうタグがあるのか？）
+					res += fmt.Sprintf("<%s>", tagName)
 				}
-			}
 
-			for c := node.FirstChild; c != nil; c = c.NextSibling {
-				r, e := traversal(c)
-				if e != nil {
-					err = e
+				for c := node.FirstChild; c != nil; c = c.NextSibling {
+					r, e := traversal(c)
+					if e != nil {
+						err = e
+					}
+					res += r
 				}
-				res += r
-			}
 
-			res += fmt.Sprintf("</%s>", tagName)
-		}
+				res += fmt.Sprintf("</%s>", tagName)
+			}
 	case html.DocumentNode :
 		for c := node.FirstChild; c != nil; c = c.NextSibling {
 			r, e := traversal(c)
