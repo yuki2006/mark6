@@ -4,8 +4,13 @@ import (
 	"golang.org/x/net/html"
 	"fmt"
 	"html/template"
-	"regexp"
 	"strings"
+	"errors"
+)
+
+var (
+	ERASE = errors.New("erase")
+	PARSE_ERROR = errors.New("parse error")
 )
 
 func allowAttrs(attrs ...string) map[string]bool {
@@ -56,13 +61,11 @@ var allowTags = map[string]map[string]bool{
 	"marquee":allowAttrs(),
 }
 
-func traversal(node *html.Node) string {
-	javascriptProtocolChecker := regexp.MustCompile("^\\s*javascript:")
-	res := ""
+func traversal(node *html.Node) (res string, err error) {
 
 	switch node.Type {
 	case html.TextNode :
-		return template.HTMLEscapeString(node.Data)
+		return template.HTMLEscapeString(node.Data), nil
 	case html.ElementNode :
 		tagName := strings.ToLower(node.Data)
 		allowMap, found := allowTags[tagName]
@@ -72,14 +75,15 @@ func traversal(node *html.Node) string {
 			for _, attr := range node.Attr {
 				if allowMap[attr.Key] {
 					if tagName == "a" && attr.Key == "href" {
-						value := strings.Replace(strings.ToLower(attr.Val), "\n", "", -1)
-
-						if javascriptProtocolChecker.MatchString(value) {
+						if !strings.HasPrefix(attr.Val, "http") {
+							err = ERASE
 							continue
 						}
 					}
 					t := fmt.Sprintf(`%s="%s"`, attr.Key, template.HTMLEscapeString(attr.Val))
 					attrs = append(attrs, t)
+				} else {
+					err = ERASE
 				}
 			}
 			attr := strings.Join(attrs, " ")
@@ -87,9 +91,9 @@ func traversal(node *html.Node) string {
 			switch tagName {
 			case "br", "img":
 				if len(attr) > 0 {
-					return fmt.Sprintf("<%s %s />", tagName, attr)
+					return fmt.Sprintf("<%s %s />", tagName, attr), nil
 				} else {
-					return fmt.Sprintf("<%s />", tagName)
+					return fmt.Sprintf("<%s />", tagName), nil
 				}
 			default:
 				if len(attr) > 0 {
@@ -98,28 +102,40 @@ func traversal(node *html.Node) string {
 
 					if tagName == "a" {
 						for c := node.FirstChild; c != nil; c = c.NextSibling {
-							res += traversal(c)
+							r, e := traversal(c)
+							if e != nil {
+								err = e
+							}
+							res += r
 						}
 						// 属性なしで a タグの場合タグ自体削除
-						return res
+						err = ERASE
 					}
 					res += fmt.Sprintf("<%s>", tagName)
 				}
 			}
 
 			for c := node.FirstChild; c != nil; c = c.NextSibling {
-				res += traversal(c)
+				r, e := traversal(c)
+				if e != nil {
+					err = e
+				}
+				res += r
 			}
 
 			res += fmt.Sprintf("</%s>", tagName)
 		}
 	case html.DocumentNode :
 		for c := node.FirstChild; c != nil; c = c.NextSibling {
-			res += traversal(c)
+			r, e := traversal(c)
+			if e != nil {
+				err = e
+			}
+			res += r
 		}
 	}
 
-	return res
+	return
 }
 
 func getFirstElementByTagName(node *html.Node, tagName string) *html.Node {
@@ -143,15 +159,19 @@ func Parse(src string) (template.HTML, error) {
 
 	body := getFirstElementByTagName(doc, "body")
 	if body == nil {
-		return "", fmt.Errorf("parse error")
+		return "", PARSE_ERROR
 	}
 
 	res := ""
 	for c := body.FirstChild; c != nil; c = c.NextSibling {
-		res += traversal(c)
+		r, e := traversal(c)
+		if e != nil {
+			err = e
+		}
+		res += r
 	}
 
-	return template.HTML(res), nil
+	return template.HTML(res), err
 }
 
 func GetFirstElementByTag(src string, tag string) (*html.Node, error) {
