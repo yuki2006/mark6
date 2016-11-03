@@ -99,7 +99,6 @@ func traversal(node *html.Node) (res string, err error) {
 				if len(attr) > 0 {
 					res += fmt.Sprintf("<%s %s>", tagName, attr)
 				} else {
-
 					if tagName == "a" {
 						for c := node.FirstChild; c != nil; c = c.NextSibling {
 							r, e := traversal(c)
@@ -110,8 +109,10 @@ func traversal(node *html.Node) (res string, err error) {
 						}
 						// 属性なしで a タグの場合タグ自体削除
 						err = ERASE
+					} else {
+						// それ以外のタグは属性がなくても追加 （そういうタグがあるのか？）
+						res += fmt.Sprintf("<%s>", tagName)
 					}
-					res += fmt.Sprintf("<%s>", tagName)
 				}
 			}
 
