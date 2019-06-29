@@ -1,15 +1,15 @@
 package mark6
 
 import (
-	"golang.org/x/net/html"
+	"errors"
 	"fmt"
+	"golang.org/x/net/html"
 	"html/template"
 	"strings"
-	"errors"
 )
 
 var (
-	ERASE = errors.New("erase")
+	ERASE       = errors.New("erase")
 	PARSE_ERROR = errors.New("parse error")
 )
 
@@ -22,51 +22,52 @@ func allowAttrs(attrs ...string) map[string]bool {
 }
 
 var allowTags = map[string]map[string]bool{
-	"a" : allowAttrs("href","target"),
-	"b" : allowAttrs(),
-	"i" : allowAttrs("class"),
-	"p" : allowAttrs(),
-	"br" : allowAttrs(),
-	"h1" : allowAttrs("class"),
-	"h2" : allowAttrs("class"),
-	"h3" : allowAttrs("class"),
-	"h4" : allowAttrs("class"),
-	"h5" : allowAttrs("class"),
-	"h6" : allowAttrs("class"),
-	"span" : allowAttrs(),
-	"div" : allowAttrs("class"),
-	"pre" : allowAttrs(),
-	"img" : allowAttrs("src", "alt"),
-	"ul" : allowAttrs(),
-	"ol" : allowAttrs(),
-	"li" : allowAttrs(),
-	"table" : allowAttrs("class"),
-	"thead" : allowAttrs(),
-	"tr" : allowAttrs(),
-	"th" : allowAttrs("data-defaultsort"),
-	"tbody" : allowAttrs(),
-	"td" : allowAttrs("class"),
-	"strong" : allowAttrs(),
-	"em" : allowAttrs(),
-	"code" : allowAttrs(),
-	"dl" : allowAttrs(),
-	"dt" : allowAttrs(),
-	"dd" : allowAttrs(),
-	"del" : allowAttrs(),
-	"sup" : allowAttrs(),
-	"sub" : allowAttrs(),
-	"u" : allowAttrs(),
-	"blockquote":allowAttrs(),
-	"s":allowAttrs(),
-	"marquee":allowAttrs(),
+	"a":          allowAttrs("href", "target"),
+	"i":          allowAttrs("class"),
+	"p":          allowAttrs(),
+	"br":         allowAttrs(),
+	"h1":         allowAttrs("class"),
+	"h2":         allowAttrs("class"),
+	"h3":         allowAttrs("class"),
+	"h4":         allowAttrs("class"),
+	"h5":         allowAttrs("class"),
+	"h6":         allowAttrs("class"),
+	"span":       allowAttrs(),
+	"div":        allowAttrs("class"),
+	"pre":        allowAttrs(),
+	"img":        allowAttrs("src", "alt"),
+	"ul":         allowAttrs(),
+	"ol":         allowAttrs(),
+	"li":         allowAttrs(),
+	"table":      allowAttrs("class"),
+	"thead":      allowAttrs(),
+	"tr":         allowAttrs(),
+	"th":         allowAttrs("data-defaultsort"),
+	"tbody":      allowAttrs(),
+	"td":         allowAttrs("class"),
+	"strong":     allowAttrs(),
+	"em":         allowAttrs(),
+	"code":       allowAttrs(),
+	"dl":         allowAttrs(),
+	"dt":         allowAttrs(),
+	"dd":         allowAttrs(),
+	"del":        allowAttrs(),
+	"sup":        allowAttrs(),
+	"sub":        allowAttrs(),
+	"u":          allowAttrs(),
+	"blockquote": allowAttrs(),
+	"s":          allowAttrs(),
+	"marquee":    allowAttrs(),
 }
 
 func traversal(node *html.Node) (res string, err error) {
 
+	res = ""
+
 	switch node.Type {
-	case html.TextNode :
+	case html.TextNode:
 		return template.HTMLEscapeString(node.Data), nil
-	case html.ElementNode :
+	case html.ElementNode:
 		tagName := strings.ToLower(node.Data)
 		allowMap, found := allowTags[tagName]
 
@@ -126,7 +127,7 @@ func traversal(node *html.Node) (res string, err error) {
 				res += fmt.Sprintf("</%s>", tagName)
 			}
 		}
-	case html.DocumentNode :
+	case html.DocumentNode:
 		for c := node.FirstChild; c != nil; c = c.NextSibling {
 			r, e := traversal(c)
 			if e != nil {
@@ -183,5 +184,3 @@ func GetFirstElementByTag(src string, tag string) (*html.Node, error) {
 	element := getFirstElementByTagName(doc, tag)
 	return element, nil
 }
-
-
