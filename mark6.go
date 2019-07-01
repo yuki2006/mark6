@@ -23,6 +23,7 @@ func allowAttrs(attrs ...string) map[string]bool {
 
 var allowTags = map[string]map[string]bool{
 	"a":          allowAttrs("href", "target"),
+	"b":          allowAttrs(),
 	"i":          allowAttrs("class"),
 	"p":          allowAttrs(),
 	"br":         allowAttrs(),
