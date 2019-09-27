@@ -40,7 +40,7 @@ var allowTags = map[string]map[string]bool{
 	"ul":         allowAttrs(),
 	"ol":         allowAttrs(),
 	"li":         allowAttrs(),
-	"table":      allowAttrs("class"),
+	"table":      allowAttrs("class", "border"),
 	"thead":      allowAttrs(),
 	"tr":         allowAttrs(),
 	"th":         allowAttrs("data-defaultsort"),
