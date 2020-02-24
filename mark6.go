@@ -61,7 +61,7 @@ var allowTags = map[string]map[string]bool{
 	"marquee":    allowAttrs(),
 }
 
-func traversal(node *html.Node) (res string, err error) {
+func traversal(node *html.Node, callBack map[string]func(node html.Node)) (res string, err error) {
 
 	res = ""
 
@@ -74,8 +74,12 @@ func traversal(node *html.Node) (res string, err error) {
 
 		if found {
 			attrs := make([]string, 0, 5)
+			className := ""
 			for _, attr := range node.Attr {
-				if allowMap[attr.Key] {
+				if attr.Key == "class" {
+					className = attr.Val
+				}
+				if strings.HasPrefix(attr.Key, "data-") || allowMap[attr.Key] {
 					if tagName == "a" && attr.Key == "href" {
 						if strings.Contains(attr.Val, ":") && !strings.HasPrefix(attr.Val, "http") {
 							err = ERASE
@@ -87,6 +91,9 @@ func traversal(node *html.Node) (res string, err error) {
 				} else {
 					err = ERASE
 				}
+			}
+			if f, ok := callBack[tagName+"."+className]; ok {
+				f(*node)
 			}
 			attr := strings.Join(attrs, " ")
 
@@ -103,7 +110,7 @@ func traversal(node *html.Node) (res string, err error) {
 				} else {
 					if tagName == "a" {
 						for c := node.FirstChild; c != nil; c = c.NextSibling {
-							r, e := traversal(c)
+							r, e := traversal(c, callBack)
 							if e != nil {
 								err = e
 							}
@@ -118,7 +125,7 @@ func traversal(node *html.Node) (res string, err error) {
 				}
 
 				for c := node.FirstChild; c != nil; c = c.NextSibling {
-					r, e := traversal(c)
+					r, e := traversal(c, callBack)
 					if e != nil {
 						err = e
 					}
@@ -130,7 +137,7 @@ func traversal(node *html.Node) (res string, err error) {
 		}
 	case html.DocumentNode:
 		for c := node.FirstChild; c != nil; c = c.NextSibling {
-			r, e := traversal(c)
+			r, e := traversal(c, callBack)
 			if e != nil {
 				err = e
 			}
@@ -155,6 +162,9 @@ func getFirstElementByTagName(node *html.Node, tagName string) *html.Node {
 }
 
 func Parse(src string) (template.HTML, error) {
+	return ParseCallBack(src, map[string]func(node html.Node){})
+}
+func ParseCallBack(src string, callBack map[string]func(node html.Node)) (template.HTML, error) {
 	doc, err := html.Parse(strings.NewReader(src))
 	if err != nil {
 		return "", err
@@ -167,7 +177,7 @@ func Parse(src string) (template.HTML, error) {
 
 	res := ""
 	for c := body.FirstChild; c != nil; c = c.NextSibling {
-		r, e := traversal(c)
+		r, e := traversal(c, callBack)
 		if e != nil {
 			err = e
 		}
