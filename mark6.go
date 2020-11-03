@@ -75,9 +75,12 @@ func traversal(node *html.Node, callBack map[string]func(node html.Node)) (res s
 		if found {
 			attrs := make([]string, 0, 5)
 			className := ""
+			id := ""
 			for _, attr := range node.Attr {
 				if attr.Key == "class" {
 					className = attr.Val
+				} else if attr.Key == "id" {
+					id = attr.Val
 				}
 				if strings.HasPrefix(attr.Key, "data-") || allowMap[attr.Key] {
 					if tagName == "a" && attr.Key == "href" {
@@ -93,6 +96,10 @@ func traversal(node *html.Node, callBack map[string]func(node html.Node)) (res s
 				}
 			}
 			if f, ok := callBack[tagName+"."+className]; ok {
+				f(*node)
+			}
+			// elseではない
+			if f, ok := callBack[tagName+"#"+id]; ok {
 				f(*node)
 			}
 			attr := strings.Join(attrs, " ")
