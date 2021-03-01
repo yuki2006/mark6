@@ -3,9 +3,10 @@ package mark6
 import (
 	"errors"
 	"fmt"
-	"golang.org/x/net/html"
 	"html/template"
 	"strings"
+
+	"golang.org/x/net/html"
 )
 
 var (
@@ -33,8 +34,9 @@ var allowTags = map[string]map[string]bool{
 	"h4":         allowAttrs("class"),
 	"h5":         allowAttrs("class"),
 	"h6":         allowAttrs("class"),
-	"span":       allowAttrs(),
+	"span":       allowAttrs("class"),
 	"div":        allowAttrs("class"),
+	"font":       allowAttrs("size", "color"),
 	"pre":        allowAttrs(),
 	"img":        allowAttrs("src", "alt"),
 	"ul":         allowAttrs(),
