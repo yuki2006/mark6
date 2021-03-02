@@ -1,4 +1,4 @@
-module mark6
+module github.com/yuki2006/mark6
 
 go 1.15
 
