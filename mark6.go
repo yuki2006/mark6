@@ -40,7 +40,7 @@ var allowTags = map[string]map[string]bool{
 	"div":        allowAttrs("class"),
 	"font":       allowAttrs("size", "color"),
 	"pre":        allowAttrs(),
-	"img":        allowAttrs("src", "alt"),
+	"img":        allowAttrs("src", "alt", "width", "height"),
 	"ul":         allowAttrs(),
 	"ol":         allowAttrs(),
 	"li":         allowAttrs(),
