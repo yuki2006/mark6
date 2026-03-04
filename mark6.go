@@ -14,7 +14,11 @@ var (
 	PARSE_ERROR = errors.New("parse error")
 )
 
-func allowAttrs(attrs ...string) map[string]bool {
+// AllowTags は許可するHTMLタグとその属性のホワイトリストを表す型
+type AllowTags map[string]map[string]bool
+
+// AllowAttrs は許可する属性のセットを生成するヘルパー関数
+func AllowAttrs(attrs ...string) map[string]bool {
 	mp := make(map[string]bool)
 	for _, attr := range attrs {
 		mp[attr] = true
@@ -22,52 +26,7 @@ func allowAttrs(attrs ...string) map[string]bool {
 	return mp
 }
 
-var allowTags = map[string]map[string]bool{
-	"a":          allowAttrs("href", "target"),
-	"b":          allowAttrs(),
-	"i":          allowAttrs("class"),
-	"p":          allowAttrs(),
-	"br":         allowAttrs(),
-	"hr":         allowAttrs(),
-	"h1":         allowAttrs("class"),
-	"h2":         allowAttrs("class"),
-	"h3":         allowAttrs("class"),
-	"h4":         allowAttrs("class"),
-	"h5":         allowAttrs("class"),
-	"h6":         allowAttrs("class"),
-	"span":       allowAttrs("class"),
-	"details":    allowAttrs("class"),
-	"div":        allowAttrs("class"),
-	"font":       allowAttrs("size", "color"),
-	"pre":        allowAttrs(),
-	"img":        allowAttrs("src", "alt", "width", "height"),
-	"ul":         allowAttrs(),
-	"ol":         allowAttrs(),
-	"li":         allowAttrs(),
-	"table":      allowAttrs("class", "border"),
-	"thead":      allowAttrs(),
-	"tr":         allowAttrs(),
-	"th":         allowAttrs("data-defaultsort"),
-	"tbody":      allowAttrs(),
-	"td":         allowAttrs("class"),
-	"strong":     allowAttrs(),
-	"em":         allowAttrs(),
-	"code":       allowAttrs(),
-	"mark":       allowAttrs(),
-	"dl":         allowAttrs(),
-	"dt":         allowAttrs(),
-	"dd":         allowAttrs(),
-	"del":        allowAttrs(),
-	"sup":        allowAttrs(),
-	"sub":        allowAttrs(),
-	"summary":    allowAttrs(),
-	"u":          allowAttrs(),
-	"blockquote": allowAttrs(),
-	"s":          allowAttrs(),
-	"marquee":    allowAttrs(),
-}
-
-func traversal(node *html.Node, callBack map[string]func(node html.Node)) (res string, err error) {
+func traversal(node *html.Node, allowTags AllowTags, callBack map[string]func(node html.Node)) (res string, err error) {
 
 	res = ""
 
@@ -123,7 +82,7 @@ func traversal(node *html.Node, callBack map[string]func(node html.Node)) (res s
 				} else {
 					if tagName == "a" {
 						for c := node.FirstChild; c != nil; c = c.NextSibling {
-							r, e := traversal(c, callBack)
+							r, e := traversal(c, allowTags, callBack)
 							if e != nil {
 								err = e
 							}
@@ -138,7 +97,7 @@ func traversal(node *html.Node, callBack map[string]func(node html.Node)) (res s
 				}
 
 				for c := node.FirstChild; c != nil; c = c.NextSibling {
-					r, e := traversal(c, callBack)
+					r, e := traversal(c, allowTags, callBack)
 					if e != nil {
 						err = e
 					}
@@ -150,7 +109,7 @@ func traversal(node *html.Node, callBack map[string]func(node html.Node)) (res s
 		}
 	case html.DocumentNode:
 		for c := node.FirstChild; c != nil; c = c.NextSibling {
-			r, e := traversal(c, callBack)
+			r, e := traversal(c, allowTags, callBack)
 			if e != nil {
 				err = e
 			}
@@ -174,10 +133,10 @@ func getFirstElementByTagName(node *html.Node, tagName string) *html.Node {
 	return nil
 }
 
-func Parse(src string) (template.HTML, error) {
-	return ParseCallBack(src, map[string]func(node html.Node){})
+func Parse(src string, allowTags AllowTags) (template.HTML, error) {
+	return ParseCallBack(src, allowTags, map[string]func(node html.Node){})
 }
-func ParseCallBack(src string, callBack map[string]func(node html.Node)) (template.HTML, error) {
+func ParseCallBack(src string, allowTags AllowTags, callBack map[string]func(node html.Node)) (template.HTML, error) {
 	doc, err := html.Parse(strings.NewReader(src))
 	if err != nil {
 		return "", err
@@ -190,7 +149,7 @@ func ParseCallBack(src string, callBack map[string]func(node html.Node)) (templa
 
 	res := ""
 	for c := body.FirstChild; c != nil; c = c.NextSibling {
-		r, e := traversal(c, callBack)
+		r, e := traversal(c, allowTags, callBack)
 		if e != nil {
 			err = e
 		}
