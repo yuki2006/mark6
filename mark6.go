@@ -111,7 +111,7 @@ func traversal(node *html.Node, callBack map[string]func(node html.Node)) (res s
 			attr := strings.Join(attrs, " ")
 
 			switch tagName {
-			case "br", "img":
+			case "br", "hr", "img":
 				if len(attr) > 0 {
 					return fmt.Sprintf("<%s %s />", tagName, attr), nil
 				} else {
