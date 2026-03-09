@@ -73,17 +73,48 @@ func main() {
 
 ### ParseCallBack
 
-特定のタグに対してコールバックを実行できます。
+コールバックで特定タグの出力を差し替えることができます。
+コールバックが `*string` を返すとそのタグの出力全体が差し替わり、`nil` を返すと通常のサニタイズ処理が行われます。
+
+キーの形式:
+- `"tagName.className"` — class属性でマッチ
+- `"tagName#id"` — id属性でマッチ
+- `"tagName"` — タグ名でマッチ
 
 ```go
-callBack := map[string]func(node html.Node){
-	"div.highlight": func(node html.Node) {
-		// class="highlight" の div が見つかったときの処理
+callBack := map[string]func(node html.Node) *string{
+	// タグ名でマッチし、出力を差し替える
+	"subtask": func(node html.Node) *string {
+		lang := "ja"
+		for _, attr := range node.Attr {
+			if attr.Key == "lang" {
+				lang = attr.Val
+			}
+		}
+		result := renderSubtaskHTML(lang)
+		return &result
 	},
-	"p#intro": func(node html.Node) {
-		// id="intro" の p が見つかったときの処理
+	// nilを返すと通常のサニタイズ処理
+	"div.highlight": func(node html.Node) *string {
+		return nil
 	},
 }
 
 result, err := mark6.ParseCallBack(src, allowTags, callBack)
+```
+
+### ParseReader / ParseCallBackReader
+
+`io.Reader` を直接受け取ることもできます。HTTPレスポンスやファイルなどからそのままパースできます。
+
+```go
+// ファイルから読み込む場合
+f, _ := os.Open("input.html")
+defer f.Close()
+result, err := mark6.ParseReader(f, allowTags)
+
+// HTTPレスポンスから読み込む場合
+resp, _ := http.Get("https://example.com")
+defer resp.Body.Close()
+result, err := mark6.ParseReader(resp.Body, allowTags)
 ```

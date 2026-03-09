@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -26,7 +27,7 @@ func AllowAttrs(attrs ...string) map[string]bool {
 	return mp
 }
 
-func traversal(node *html.Node, allowTags AllowTags, callBack map[string]func(node html.Node)) (res string, err error) {
+func traversal(node *html.Node, allowTags AllowTags, callBack map[string]func(node html.Node) *string) (res string, err error) {
 
 	res = ""
 
@@ -61,11 +62,20 @@ func traversal(node *html.Node, allowTags AllowTags, callBack map[string]func(no
 				}
 			}
 			if f, ok := callBack[tagName+"."+className]; ok {
-				f(*node)
+				if s := f(*node); s != nil {
+					return *s, nil
+				}
 			}
 			// elseではない
 			if f, ok := callBack[tagName+"#"+id]; ok {
-				f(*node)
+				if s := f(*node); s != nil {
+					return *s, nil
+				}
+			}
+			if f, ok := callBack[tagName]; ok {
+				if s := f(*node); s != nil {
+					return *s, nil
+				}
 			}
 			attr := strings.Join(attrs, " ")
 
@@ -134,10 +144,19 @@ func getFirstElementByTagName(node *html.Node, tagName string) *html.Node {
 }
 
 func Parse(src string, allowTags AllowTags) (template.HTML, error) {
-	return ParseCallBack(src, allowTags, map[string]func(node html.Node){})
+	return ParseReader(strings.NewReader(src), allowTags)
 }
-func ParseCallBack(src string, allowTags AllowTags, callBack map[string]func(node html.Node)) (template.HTML, error) {
-	doc, err := html.Parse(strings.NewReader(src))
+
+func ParseCallBack(src string, allowTags AllowTags, callBack map[string]func(node html.Node) *string) (template.HTML, error) {
+	return ParseCallBackReader(strings.NewReader(src), allowTags, callBack)
+}
+
+func ParseReader(r io.Reader, allowTags AllowTags) (template.HTML, error) {
+	return ParseCallBackReader(r, allowTags, map[string]func(node html.Node) *string{})
+}
+
+func ParseCallBackReader(r io.Reader, allowTags AllowTags, callBack map[string]func(node html.Node) *string) (template.HTML, error) {
+	doc, err := html.Parse(r)
 	if err != nil {
 		return "", err
 	}
