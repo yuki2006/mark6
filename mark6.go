@@ -15,6 +15,58 @@ var (
 	PARSE_ERROR = errors.New("parse error")
 )
 
+// EraseDetail は削除された要素の詳細を表す
+type EraseDetail struct {
+	Reason string // "disallowed_attr", "dangerous_href", "empty_anchor"
+	Tag    string // タグ名
+	Attr   string // 属性名（該当する場合）
+	Value  string // 属性値（該当する場合）
+}
+
+func (d EraseDetail) String() string {
+	switch d.Reason {
+	case "disallowed_attr":
+		return fmt.Sprintf("<%s>タグの属性「%s」は許可されていません", d.Tag, d.Attr)
+	case "dangerous_href":
+		return fmt.Sprintf("<%s>タグのhref「%s」は許可されていません（httpで始まるURLのみ使用可）", d.Tag, d.Value)
+	case "empty_anchor":
+		return fmt.Sprintf("<%s>タグにhref属性がないため削除されました", d.Tag)
+	default:
+		return fmt.Sprintf("<%s>タグの一部が削除されました", d.Tag)
+	}
+}
+
+// EraseError は削除が発生した場合のエラー。詳細情報を含む。
+type EraseError struct {
+	Details []EraseDetail
+}
+
+func (e *EraseError) Error() string {
+	return "erase"
+}
+
+// Is は errors.Is でERASEと一致させるため
+func (e *EraseError) Is(target error) bool {
+	return target == ERASE
+}
+
+// FormatDetails は削除された内容を人間が読みやすい文字列にする
+func (e *EraseError) FormatDetails() string {
+	if len(e.Details) == 0 {
+		return ""
+	}
+	seen := make(map[string]bool)
+	var lines []string
+	for _, d := range e.Details {
+		s := d.String()
+		if !seen[s] {
+			seen[s] = true
+			lines = append(lines, "・"+s)
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
 // AllowTags は許可するHTMLタグとその属性のホワイトリストを表す型
 type AllowTags map[string]map[string]bool
 
@@ -27,7 +79,7 @@ func AllowAttrs(attrs ...string) map[string]bool {
 	return mp
 }
 
-func traversal(node *html.Node, allowTags AllowTags, callBack map[string]func(node html.Node) *string) (res string, err error) {
+func traversal(node *html.Node, allowTags AllowTags, callBack map[string]func(node html.Node) *string, eraseErr *EraseError) (res string, err error) {
 
 	res = ""
 
@@ -52,6 +104,9 @@ func traversal(node *html.Node, allowTags AllowTags, callBack map[string]func(no
 					if tagName == "a" && attr.Key == "href" {
 						if strings.Contains(attr.Val, ":") && !strings.HasPrefix(attr.Val, "http") {
 							err = ERASE
+							eraseErr.Details = append(eraseErr.Details, EraseDetail{
+								Reason: "dangerous_href", Tag: tagName, Attr: "href", Value: attr.Val,
+							})
 							continue
 						}
 					}
@@ -59,6 +114,9 @@ func traversal(node *html.Node, allowTags AllowTags, callBack map[string]func(no
 					attrs = append(attrs, t)
 				} else {
 					err = ERASE
+					eraseErr.Details = append(eraseErr.Details, EraseDetail{
+						Reason: "disallowed_attr", Tag: tagName, Attr: attr.Key, Value: attr.Val,
+					})
 				}
 			}
 			if f, ok := callBack[tagName+"."+className]; ok {
@@ -92,7 +150,7 @@ func traversal(node *html.Node, allowTags AllowTags, callBack map[string]func(no
 				} else {
 					if tagName == "a" {
 						for c := node.FirstChild; c != nil; c = c.NextSibling {
-							r, e := traversal(c, allowTags, callBack)
+							r, e := traversal(c, allowTags, callBack, eraseErr)
 							if e != nil {
 								err = e
 							}
@@ -100,6 +158,9 @@ func traversal(node *html.Node, allowTags AllowTags, callBack map[string]func(no
 						}
 						// 属性なしで a タグの場合タグ自体削除
 						err = ERASE
+						eraseErr.Details = append(eraseErr.Details, EraseDetail{
+							Reason: "empty_anchor", Tag: tagName,
+						})
 						return
 					}
 					// それ以外のタグは属性がなくても追加 （そういうタグがあるのか？）
@@ -107,7 +168,7 @@ func traversal(node *html.Node, allowTags AllowTags, callBack map[string]func(no
 				}
 
 				for c := node.FirstChild; c != nil; c = c.NextSibling {
-					r, e := traversal(c, allowTags, callBack)
+					r, e := traversal(c, allowTags, callBack, eraseErr)
 					if e != nil {
 						err = e
 					}
@@ -119,7 +180,7 @@ func traversal(node *html.Node, allowTags AllowTags, callBack map[string]func(no
 		}
 	case html.DocumentNode:
 		for c := node.FirstChild; c != nil; c = c.NextSibling {
-			r, e := traversal(c, allowTags, callBack)
+			r, e := traversal(c, allowTags, callBack, eraseErr)
 			if e != nil {
 				err = e
 			}
@@ -166,13 +227,19 @@ func ParseCallBackReader(r io.Reader, allowTags AllowTags, callBack map[string]f
 		return "", PARSE_ERROR
 	}
 
+	eraseErr := &EraseError{}
 	res := ""
 	for c := body.FirstChild; c != nil; c = c.NextSibling {
-		r, e := traversal(c, allowTags, callBack)
+		r, e := traversal(c, allowTags, callBack, eraseErr)
 		if e != nil {
 			err = e
 		}
 		res += r
+	}
+
+	// ERASEが発生した場合、詳細付きのEraseErrorを返す
+	if errors.Is(err, ERASE) && len(eraseErr.Details) > 0 {
+		err = eraseErr
 	}
 
 	return template.HTML(res), err
