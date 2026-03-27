@@ -25,6 +25,8 @@ type EraseDetail struct {
 
 func (d EraseDetail) String() string {
 	switch d.Reason {
+	case "disallowed_tag":
+		return fmt.Sprintf("<%s>タグは許可されていません", d.Tag)
 	case "disallowed_attr":
 		return fmt.Sprintf("<%s>タグの属性「%s」は許可されていません", d.Tag, d.Attr)
 	case "dangerous_href":
@@ -90,6 +92,12 @@ func traversal(node *html.Node, allowTags AllowTags, callBack map[string]func(no
 		tagName := strings.ToLower(node.Data)
 		allowMap, found := allowTags[tagName]
 
+		if !found {
+			err = ERASE
+			eraseErr.Details = append(eraseErr.Details, EraseDetail{
+				Reason: "disallowed_tag", Tag: tagName,
+			})
+		}
 		if found {
 			attrs := make([]string, 0, 5)
 			className := ""
