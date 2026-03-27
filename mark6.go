@@ -24,17 +24,18 @@ type EraseDetail struct {
 }
 
 func (d EraseDetail) String() string {
+	tag := "&lt;" + d.Tag + "&gt;"
 	switch d.Reason {
 	case "disallowed_tag":
-		return fmt.Sprintf("<%s>タグは許可されていません", d.Tag)
+		return tag + "タグは許可されていません"
 	case "disallowed_attr":
-		return fmt.Sprintf("<%s>タグの属性「%s」は許可されていません", d.Tag, d.Attr)
+		return tag + "タグの属性「" + d.Attr + "」は許可されていません"
 	case "dangerous_href":
-		return fmt.Sprintf("<%s>タグのhref「%s」は許可されていません（httpで始まるURLのみ使用可）", d.Tag, d.Value)
+		return tag + "タグのhref「" + d.Value + "」は許可されていません（httpで始まるURLのみ使用可）"
 	case "empty_anchor":
-		return fmt.Sprintf("<%s>タグにhref属性がないため削除されました", d.Tag)
+		return tag + "タグにhref属性がないため削除されました"
 	default:
-		return fmt.Sprintf("<%s>タグの一部が削除されました", d.Tag)
+		return tag + "タグの一部が削除されました"
 	}
 }
 
@@ -66,7 +67,7 @@ func (e *EraseError) FormatDetails() string {
 			lines = append(lines, "・"+s)
 		}
 	}
-	return strings.Join(lines, "\n")
+	return strings.Join(lines, "<br>")
 }
 
 // AllowTags は許可するHTMLタグとその属性のホワイトリストを表す型
