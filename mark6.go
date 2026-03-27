@@ -23,22 +23,6 @@ type EraseDetail struct {
 	Value  string // 属性値（該当する場合）
 }
 
-func (d EraseDetail) String() string {
-	tag := "&lt;" + d.Tag + "&gt;"
-	switch d.Reason {
-	case "disallowed_tag":
-		return tag + "タグは許可されていません"
-	case "disallowed_attr":
-		return tag + "タグの属性「" + d.Attr + "」は許可されていません"
-	case "dangerous_href":
-		return tag + "タグのhref「" + d.Value + "」は許可されていません（httpで始まるURLのみ使用可）"
-	case "empty_anchor":
-		return tag + "タグにhref属性がないため削除されました"
-	default:
-		return tag + "タグの一部が削除されました"
-	}
-}
-
 // EraseError は削除が発生した場合のエラー。詳細情報を含む。
 type EraseError struct {
 	Details []EraseDetail
@@ -51,23 +35,6 @@ func (e *EraseError) Error() string {
 // Is は errors.Is でERASEと一致させるため
 func (e *EraseError) Is(target error) bool {
 	return target == ERASE
-}
-
-// FormatDetails は削除された内容を人間が読みやすい文字列にする
-func (e *EraseError) FormatDetails() string {
-	if len(e.Details) == 0 {
-		return ""
-	}
-	seen := make(map[string]bool)
-	var lines []string
-	for _, d := range e.Details {
-		s := d.String()
-		if !seen[s] {
-			seen[s] = true
-			lines = append(lines, "・"+s)
-		}
-	}
-	return strings.Join(lines, "<br>")
 }
 
 // AllowTags は許可するHTMLタグとその属性のホワイトリストを表す型
